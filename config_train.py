@@ -39,8 +39,8 @@ if 'cifar' in C.dataset:
     #C.stem_channel = 32
     C.header_channel = 512
     #C.header_channel = 1024
-    C.layer_abit = [32, 8, 8,8,8, 8,8,8, 8,8,8, 16,32]# last 16 s
-    C.layer_wbit = [16, 8, 6,6,6, 6,6,6, 8,8,8, 16,16]
+    C.layer_abit = [32, 8,  8,8,8, 8,8,8, 8,8,8, 32,32]# last 16 s
+    C.layer_wbit = [32, 8,  6,6,6, 6,6,6, 8,8,8, 16,16]
 
     #C.layer_abit = [32, 32, 32,32,32, 32,32,32, 32,32,32, 32,32]
     #C.layer_wbit = [32, 32, 32,32,32, 32,32,32, 32,32,32, 32,32]

@@ -1,5 +1,5 @@
 from QConvnextblock import ConvnextBlock,ConvNorm
-from quant_fn import Linear_Q,Conv2d_Q,activation_quant
+from quant_fn import Linear_Q,Conv2d_Q,activation_quant,act_pactq
 import torch.nn as nn
 from torch.nn import init
 
@@ -15,7 +15,9 @@ class ToyNet(nn.Module):
         self.layer_abit = config.layer_abit
         self.layer_wbit = config.layer_wbit
         self.cells = nn.ModuleList()
-        self.act_quant1= activation_quant(self.layer_abit[0])
+        #self.act_quant1=activation_quant(self.layer_abit[0])
+        self.act_quant1= act_pactq(self.layer_abit[0],fixed_rescale=10)
+        
         self.stem = ConvNorm(self.layer_abit[1],self.layer_wbit[0],C_in=3,C_out=self.stem_channel,kernel_size=3,padding=1,stride=1,bias=False)
         
         t_cin, t_cout = 0,0 
@@ -32,13 +34,15 @@ class ToyNet(nn.Module):
                     t_cin,t_cout = self.num_channel_list[stage_id],self.num_channel_list[stage_id]
                     t_stride = 1
                 #a_bit,w_bit,C_in,C_out, expansion=1, kernel_size=3, stride=1,
-                block = ConvnextBlock(self.layer_abit[layer_id+1],self.layer_wbit[layer_id],t_cin,t_cout,expansion = 4, kernel_size=3,stride=t_stride)
+                block = ConvnextBlock(self.layer_abit[layer_id],self.layer_abit[layer_id+1],self.layer_wbit[layer_id],t_cin,t_cout,expansion = 4, kernel_size=3,stride=t_stride)
                 self.cells.append(block)
                 layer_id+=1
         
         self.header = ConvNorm(self.layer_abit[-1],self.layer_wbit[-2],self.num_channel_list[-1], self.header_channel, kernel_size=1)
         self.avgpool = nn.AdaptiveAvgPool2d(1)
-        self.act_quant2= activation_quant(self.layer_abit[-1])
+        #self.act_quant2= activation_quant(a_bit = self.layer_abit[-1])
+        self.act_quant2= act_pactq(a_bit = self.layer_abit[-1],fixed_rescale=10)
+        
         self.fc = Linear_Q(self.layer_wbit[-1],self.header_channel, self.num_classes)
 
         self._criterion = nn.CrossEntropyLoss()
@@ -60,8 +64,7 @@ class ToyNet(nn.Module):
                     init.constant_(m.bias, 0)
 
     def forward(self,input):
-        # the input of the first layer can choose quantize or not
-        # here we quantize to 16bits
+        # the input of the first layer can choose quantize or not,usually not quantize
         q_input = self.act_quant1(input)
         out = self.stem(q_input)
 

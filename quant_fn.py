@@ -64,13 +64,36 @@ class activation_quant(nn.Module):
             activation_q = x
         else:
             #activation_q = self.uniform_q(torch.clamp(x, 0, 1))
-            #activation_q = self.uniform_q(torch.clamp(x*0.1, 0, 1))
-            activation_q = self.uniform_q(torch.clamp(x/16, 0, 1))
+            activation_q = self.uniform_q(torch.clamp(x*0.1, 0, 1))
+            #activation_q = self.uniform_q(torch.clamp(x/8, 0, 1))
             # print(np.unique(activation_q.detach().numpy()))
         return activation_q
 
     def __repr__(self):
         return '{}( Abit={} )'.format(self.__class__.__name__, self.a_bit)
+
+class act_pactq(nn.Module):
+    def __init__(self, a_bit,fixed_rescale=2.0):
+        super(act_pactq, self).__init__()
+        assert a_bit <= 16 or a_bit == 32
+        self.a_bit = a_bit
+        self.scale_coef = fixed_rescale
+        self.uniform_q = uniform_quantize(k=a_bit)
+
+    def forward(self, x):
+        if self.a_bit == 32:
+            activation_q = x
+        else:
+            out = 0.5*( x.abs() - (x-self.scale_coef).abs()+self.scale_coef)
+            activation_q = self.uniform_q(out / self.scale_coef ) * self.scale_coef 
+            
+            #activation_q = self.uniform_q(torch.clamp(x, 0, 1))
+            #activation_q = self.uniform_q(torch.clamp(x/8, 0, 1))
+            # print(np.unique(activation_q.detach().numpy()))
+        return activation_q
+
+    def __repr__(self):
+        return '{}( Abit={},Scale_Coef={} )'.format(self.__class__.__name__, self.a_bit,self.scale_coef)
 
 class Conv2d_Q(nn.Conv2d):
     def __init__(self, w_bit,in_channels, out_channels,kernel_size, stride=1,
@@ -94,8 +117,6 @@ class Conv2d_Q(nn.Conv2d):
 
 
 
-
-
 class Linear_Q(nn.Linear):
     def __init__(self, w_bit,in_features, out_features, bias=True):
         super(Linear_Q, self).__init__(in_features, out_features, bias)
@@ -105,6 +126,9 @@ class Linear_Q(nn.Linear):
     def forward(self, input):
         weight_q = self.quantize_fn(self.weight)
         # print(np.unique(weight_q.detach().numpy()))
+        #if self.bias!=None:
+            #bq = self.quantize_fn(self.bias)
+
         return F.linear(input, weight_q, self.bias)
 
     def __repr__(self):
