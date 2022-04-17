@@ -10,6 +10,9 @@ cfg = C
 
 
 C.dataset = 'cifar10'
+#C.model ='MBv2_cf10'
+#C.model = 'RN20'
+C.model='ToyNet'
 
 if 'cifar' in C.dataset:
     """Data Dir and Weight Dir"""
@@ -39,8 +42,21 @@ if 'cifar' in C.dataset:
     #C.stem_channel = 32
     C.header_channel = 512
     #C.header_channel = 1024
-    C.layer_abit = [32, 8,  8,8,8, 8,8,8, 8,8,8, 32,32]# last 16 s
-    C.layer_wbit = [32, 8,  6,6,6, 6,6,6, 8,8,8, 16,16]
+    if C.model == 'ToyNet':
+        C.layer_abit = [32,  8, 8,8,8, 8,8,8, 8,8,8,  32,32]# last 16 s
+        C.layer_wbit = [32,  8, 6,6,6, 6,6,6, 8,8,8,  16,16]
+    elif C.model =='MBv2_cf10':
+        #stem + [ 1, 2, 3, 4, 3, 3, 1] + head + fc
+        C.layer_abit = [32, 8, 8,8, 8,8,8, 8,8,8,8, 8,8,8, 8,8,8, 8, 32,32]# last 16 s
+        C.layer_wbit = [32, 8, 8,8, 8,8,8, 8,8,8,8, 8,8,8, 8,8,8, 8, 16,16]
+    elif C.model=='RN20':
+        #C.layer_abit = [  8,8,8, 8,8,8, 8,8,8]
+        #C.layer_wbit = [  8,8,8, 8,8,8, 8,8,8]
+        C.layer_abit = [  32]*9
+        C.layer_wbit = [  32]*9
+    else:
+        print('Wrong Model.')
+        sys.exit()
 
     #C.layer_abit = [32, 32, 32,32,32, 32,32,32, 32,32,32, 32,32]
     #C.layer_wbit = [32, 32, 32,32,32, 32,32,32, 32,32,32, 32,32]
@@ -52,18 +68,18 @@ if 'cifar' in C.dataset:
     C.weight_decay = 5e-4
     C.betas=(0.5, 0.999)
     C.num_workers = 4
-    C.pretrain = 'ckpt/finetune'
+    C.pretrain = "ckpt/finetune-{0}".format(C.model)
 
-    C.batch_size = 128 # 96->128
+    C.batch_size = 256 #128 # 96->128
     C.niters_per_epoch = C.num_train_imgs // C.batch_size
     C.image_height = 32 # this size is after down_sampling
     C.image_width = 32
 
-    C.save = "finetune"
+    C.save = "finetune-{0}".format(C.model)
     C.nepochs = 300 #600->300
     C.eval_epoch = 1
     C.lr_schedule = 'cosine'
-    C.lr = 0.01
+    C.lr = 0.1#0.01
     # linear 
     C.decay_epoch = 100
     # exponential

@@ -1,8 +1,10 @@
+from turtle import forward
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
-
+from torch.autograd import Function
+from torch.nn.parameter import Parameter
 # Fake node, quant and dequant opereation
 def uniform_quantize(k):
     class qfn(torch.autograd.Function):
@@ -24,6 +26,52 @@ def uniform_quantize(k):
             return grad_input
 
     return qfn().apply
+
+
+class ActFn(Function):
+    @staticmethod
+    def forward(ctx, x,alpha,k):
+        assert k <= 16 or k == 32
+        if k==32:
+            return x
+        ctx.save_for_backward(x, alpha)
+        # y_1 = 0.5 * ( torch.abs(x).detach() - torch.abs(x - alpha).detach() + alpha.item() )
+        y = torch.clamp(x, min = 0, max = alpha.item())
+        scale = (2**k - 1) / alpha
+        y_q = torch.round( y * scale) / scale
+        return y_q
+
+    @staticmethod
+    def backward(ctx, dLdy_q):
+        # Backward function, I borrowed code from
+        # https://github.com/obilaniu/GradOverride/blob/master/functional.py
+        # We get dL / dy_q as a gradient
+        x, alpha, = ctx.saved_tensors
+        # Weight gradient is only valid when [0, alpha]
+        # Actual gradient for alpha,
+        # By applying Chain Rule, we get dL / dy_q * dy_q / dy * dy / dalpha
+        # dL / dy_q = argument,  dy_q / dy * dy / dalpha = 0, 1 with x value range 
+        lower_bound      = x < 0
+        upper_bound      = x > alpha
+        # x_range       = 1.0-lower_bound-upper_bound
+        x_range = ~(lower_bound|upper_bound)
+        grad_alpha = torch.sum(dLdy_q * torch.ge(x, alpha).float()).view(-1)
+        return dLdy_q * x_range.float(), grad_alpha, None
+
+class ActQuant(nn.Module):
+    def __init__(self,a_bit,scale_coef=10.0):
+        super(ActQuant,self).__init__()
+        self.scale_coef = Parameter(torch.tensor(scale_coef))
+        self.bit = a_bit
+        self.quant = ActFn.apply
+
+    def forward(self,x):
+        if self.bit == 32:
+            q_x = x
+        else:
+            q_x = self.quant(x,self.scale_coef,self.bit)
+        return q_x
+
 
 
 class weight_quantize_fn(nn.Module):
@@ -86,14 +134,12 @@ class act_pactq(nn.Module):
         else:
             out = 0.5*( x.abs() - (x-self.scale_coef).abs()+self.scale_coef)
             activation_q = self.uniform_q(out / self.scale_coef ) * self.scale_coef 
-            
-            #activation_q = self.uniform_q(torch.clamp(x, 0, 1))
-            #activation_q = self.uniform_q(torch.clamp(x/8, 0, 1))
-            # print(np.unique(activation_q.detach().numpy()))
         return activation_q
 
     def __repr__(self):
         return '{}( Abit={},Scale_Coef={} )'.format(self.__class__.__name__, self.a_bit,self.scale_coef)
+
+
 
 class Conv2d_Q(nn.Conv2d):
     def __init__(self, w_bit,in_channels, out_channels,kernel_size, stride=1,

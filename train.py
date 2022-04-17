@@ -27,6 +27,8 @@ from tensorboardX import SummaryWriter
 
 from config_train import config
 from ToyModel import ToyNet
+from MobileNetv2 import MobileNetV2_CF
+from ResNet_CF import resnet20_cifar10_Q as RN20_CF
 
 from quant_fn import Conv2d_Q,Linear_Q
 from thop import profile
@@ -92,8 +94,14 @@ def main_worker(config):
     logging.getLogger().addHandler(fh)
     logging.info("args = %s", str(config))
 
-
-    model = ToyNet(config=config)
+    if config.model == 'ToyNet':
+        model = ToyNet(config=config)
+    elif config.model =='MBv2_cf10':
+        model = MobileNetV2_CF(config=config)
+    elif config.model == 'RN20':
+        model = RN20_CF(config=config)
+    else:
+        raise NotImplementedError
     
     #print(model)
     #return
@@ -111,14 +119,15 @@ def main_worker(config):
     #         sys.exit()
 
     #criterion = nn.CrossEntropyLoss()
+    model_trainable_parameters = filter(lambda x: x.requires_grad, model.parameters())
     if config.opt == 'Adam':
         optimizer = torch.optim.Adam(
-            model.parameters(),
+            model_trainable_parameters,
             lr=config.lr,
             betas=config.betas)
     elif config.opt == 'Sgd':
         optimizer = torch.optim.SGD(
-            model.parameters(),
+            model_trainable_parameters,
             lr=config.lr,
             momentum=config.momentum,
             weight_decay=config.weight_decay)
@@ -275,7 +284,7 @@ def main_worker(config):
 def train(train_loader, model, optimizer, lr_policy, logger, epoch, config):
     model.train()
 
-
+    lambda_alpha = 0.0002
     for batch_idx, (input, target) in enumerate(train_loader):
         optimizer.zero_grad()
 
@@ -289,7 +298,12 @@ def train(train_loader, model, optimizer, lr_policy, logger, epoch, config):
         criterion = model.module._criterion
         logit = model(input)
         loss = criterion(logit, target)
-
+        
+        l2_alpha = 0.0
+        for name, param in model.named_parameters():
+            if "scale_coef" in name:
+                l2_alpha += torch.pow(param, 2)
+        loss += lambda_alpha * l2_alpha
 
         loss.backward()
 

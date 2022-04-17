@@ -1,5 +1,5 @@
 from QConvnextblock import ConvnextBlock,ConvNorm
-from quant_fn import Linear_Q,Conv2d_Q,activation_quant,act_pactq
+from quant_fn import Linear_Q,Conv2d_Q,activation_quant,act_pactq,ActQuant
 import torch.nn as nn
 from torch.nn import init
 
@@ -15,8 +15,9 @@ class ToyNet(nn.Module):
         self.layer_abit = config.layer_abit
         self.layer_wbit = config.layer_wbit
         self.cells = nn.ModuleList()
-        #self.act_quant1=activation_quant(self.layer_abit[0])
-        self.act_quant1= act_pactq(self.layer_abit[0],fixed_rescale=10)
+        self.act_qinput=activation_quant(self.layer_abit[0])
+        #self.act_qinput= act_pactq(self.layer_abit[0],fixed_rescale=10)
+        #self.act_qinput= ActQuant(self.layer_abit[0],scale_coef=10.0)
         
         self.stem = ConvNorm(self.layer_abit[1],self.layer_wbit[0],C_in=3,C_out=self.stem_channel,kernel_size=3,padding=1,stride=1,bias=False)
         
@@ -40,8 +41,9 @@ class ToyNet(nn.Module):
         
         self.header = ConvNorm(self.layer_abit[-1],self.layer_wbit[-2],self.num_channel_list[-1], self.header_channel, kernel_size=1)
         self.avgpool = nn.AdaptiveAvgPool2d(1)
-        #self.act_quant2= activation_quant(a_bit = self.layer_abit[-1])
-        self.act_quant2= act_pactq(a_bit = self.layer_abit[-1],fixed_rescale=10)
+        self.act_qlast= activation_quant(a_bit = self.layer_abit[-1])
+        #self.act_qlast= act_pactq(a_bit = self.layer_abit[-1],fixed_rescale=10)
+        #self.act_qlast= ActQuant(a_bit = self.layer_abit[-1],scale_coef=10.0)
         
         self.fc = Linear_Q(self.layer_wbit[-1],self.header_channel, self.num_classes)
 
@@ -65,7 +67,7 @@ class ToyNet(nn.Module):
 
     def forward(self,input):
         # the input of the first layer can choose quantize or not,usually not quantize
-        q_input = self.act_quant1(input)
+        q_input = self.act_qinput(input)
         out = self.stem(q_input)
 
         for i,cell in enumerate(self.cells):
@@ -73,7 +75,7 @@ class ToyNet(nn.Module):
         
         out = self.header(out)
         out = self.avgpool(out)
-        out = self.act_quant2(out)
+        out = self.act_qlast(out)
         out = self.fc(out.view(out.size(0),-1))
         #the last avgpool and fc layer be quantized to 16bits
         return out

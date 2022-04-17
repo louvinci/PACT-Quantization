@@ -2,7 +2,7 @@ from turtle import forward
 import torch
 import torch.nn as nn
 import numpy as np
-from quant_fn import Linear_Q,Conv2d_Q,activation_quant,act_pactq
+from quant_fn import Linear_Q,Conv2d_Q,activation_quant,act_pactq,ActQuant
 Conv2d=Conv2d_Q
 BatchNorm2d = nn.BatchNorm2d
 
@@ -52,16 +52,21 @@ class ConvnextBlock(nn.Module):
         self.conv1 = Conv2d(w_bit,C_out, C_out, kernel_size=self.kernel_size, stride=1, padding=self.padding, dilation=1, groups=C_out, bias=bias)
         self.bn1 = BatchNorm2d(C_out)
         #self.act_quant_in1 = activation_quant(a_bit=ain_bit)
-        self.act_quant_in1 = act_pactq(a_bit=ain_bit,fixed_rescale=8)
+        #self.act_quant_in1 = act_pactq(a_bit=ain_bit,fixed_rescale=4)
+        self.act_quant_in1 = ActQuant(a_bit=ain_bit)
 
         self.conv2 = Conv2d(w_bit,C_out,C_out*expansion,kernel_size=1,stride=1,padding=0,dilation=1,groups=self.groups,bias=bias)
         self.relu=nn.ReLU(inplace=True)
         #self.act_quant_in2 = activation_quant(a_bit=ain_bit)
-        self.act_quant_in2 = act_pactq(a_bit=ain_bit,fixed_rescale=8)
+        #self.act_quant_in2 = act_pactq(a_bit=ain_bit,fixed_rescale=4)
+        
+        self.act_quant_in2 = ActQuant(a_bit=ain_bit)
         
         self.conv3 = Conv2d(w_bit,C_out*expansion,C_out,kernel_size=1,stride=1,padding=0,dilation=1,groups=self.groups,bias=bias)
+        
         #self.act_quant_out = activation_quant(a_bit=aout_bit)
-        self.act_quant_out = act_pactq(a_bit=aout_bit,fixed_rescale=8)
+        #self.act_quant_out = act_pactq(a_bit=aout_bit,fixed_rescale=4)
+        self.act_quant_out = ActQuant(a_bit=aout_bit)
         
     def forward(self,x):
         #default the x is quantized
@@ -101,7 +106,8 @@ class ConvNorm(nn.Module):
         self.bn = BatchNorm2d(C_out)
         
         #self.act_quant_out=activation_quant(a_bit=aout_bit)
-        self.act_quant_out=act_pactq(a_bit=aout_bit,fixed_rescale=10)
+        #self.act_quant_out=act_pactq(a_bit=aout_bit,fixed_rescale=10)
+        self.act_quant_out=ActQuant(a_bit=aout_bit,scale_coef=10.0)
     
     def forward(self,x):
         q_x = self.conv(x)
