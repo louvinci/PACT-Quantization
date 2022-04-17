@@ -1,4 +1,4 @@
-# DoReFA\PACT-QAT
+# DoReFa\PACT-QAT
 Quantization (QAT) Demo on CIFAR10 
 混合位宽量化、Quantization-aware-training、MobileNetv2、ResNet20、自定制的ConvNextNet
 
@@ -24,7 +24,7 @@ ResNet类网络直接使用DoReFa量化对精度影响不大。但MBConv类则�
 
 ## 实验记录
 😠ToyNet  
-batch=128, lr=0.01, 'cos'学习率调整, epoch=300 (params:0.203626M, MADDS :25.601536M)  **模型参数、计算量较小**量化影响比较大  
+batch=128, lr=0.01, 'cos'学习率调整, epoch=300 (params:0.203626M, MADDS :25.601536M)   
 |ToyNet-CIFAR10 |full Precision| cfg-1 w\o larger Batchsize| cfg-2|
 |:--:| :--:|:--:|:--:|
 |ACC(%) |91.594 |89.814\89.482|89.458 |
