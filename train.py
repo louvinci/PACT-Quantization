@@ -107,9 +107,10 @@ def main_worker(config):
     
     #print(model)
     #return
-    logging.info("model = %s",str(model))
-    flops, params = profile(model, inputs=(torch.randn(1, 3, config.image_height, config.image_width),), custom_ops=custom_ops)
-    logging.info("params = %fM, FLOPs = %fM", params / 1e6, flops / 1e6)
+    #logging.info("model = %s",str(model))
+    #
+    # flops, params = profile(model, inputs=(torch.randn(1, 3, config.image_height, config.image_width),), custom_ops=custom_ops)
+    # logging.info("params = %fM, FLOPs = %fM", params / 1e6, flops / 1e6)
     model = torch.nn.DataParallel(model).cuda()
 
 
@@ -157,7 +158,7 @@ def main_worker(config):
     if type(pretrain) == str and os.path.exists(pretrain + "/weights_latest.pt"):
         pretrained_model = torch.load(pretrain + "/weights_latest.pt")
         partial = pretrained_model['state_dict']
-
+        
         state = model.state_dict()
         pretrained_dict = {k: v for k, v in partial.items() if k in state and state[k].size() == partial[k].size()}
         state.update(pretrained_dict)
@@ -167,8 +168,8 @@ def main_worker(config):
         lr_policy.load_state_dict(pretrained_model['lr_scheduler'])
         start_epoch = pretrained_model['epoch'] + 1
 
-        best_acc = pretrained_model['best_acc']
-        best_epoch = pretrained_model['best_epoch']
+        best_acc = pretrained_model['acc']
+        best_epoch = pretrained_model['epoch']
 
         print('Resume from Epoch %d. Load pretrained weight.' % start_epoch)
 
@@ -241,7 +242,12 @@ def main_worker(config):
                                           num_workers=config.num_workers)
 
     if config.eval_only:
-        logging.info('Eval: acc = %f', infer(0, model, test_loader, logger))
+        acc1,acc5 = infer(0, model, test_loader, logger)
+        logging.info('Eval: acc1 = %f, acc5 = %f', acc1,acc5)
+        state = {}
+        state['state_dict'] = model.state_dict()
+        state['acc'] = acc1
+        torch.save(state, os.path.join(config.save, 'weights_best.pt'))
         sys.exit(0)
 
     # tbar = tqdm(range(config.nepochs), ncols=80)
