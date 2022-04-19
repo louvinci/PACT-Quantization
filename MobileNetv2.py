@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from quant_fn import act_pactq,activation_quant,Conv2d_Q,Linear_Q
+from quant_fn import act_pactq,activation_quant,Conv2d_Q,Linear_Q,ActQuant
 Conv2d=Conv2d_Q
 BatchNorm2d = nn.BatchNorm2d
 
@@ -13,32 +13,33 @@ class Block(nn.Module):
         planes     = expansion * in_planes
         self.conv1 = Conv2d(w_bit,in_planes, planes, kernel_size=1, stride=1, padding=0, bias=False)
         self.bn1   = BatchNorm2d(planes)
-        self.act_quant1 = activation_quant(a_bit=ain_bit)
+        self.act_quant1 = ActQuant(a_bit=ain_bit)
         #self.act_quant1 = act_pactq(a_bit=ain_bit,fixed_rescale=6.0)
 
         self.conv2 = Conv2d(w_bit,planes, planes, kernel_size=3, stride=stride, padding=1, groups=planes, bias=False)
         self.bn2   = BatchNorm2d(planes)
-        self.act_quant2 = activation_quant(a_bit=ain_bit)
+        self.act_quant2 = ActQuant(a_bit=ain_bit)
         #self.act_quant2 = act_pactq(a_bit=ain_bit,fixed_rescale=6.0)
 
         self.conv3 = Conv2d(w_bit,planes, out_planes, kernel_size=1, stride=1, padding=0, bias=False)
         self.bn3   = BatchNorm2d(out_planes)
-        self.act_quant3 = activation_quant(a_bit=aout_bit)
+        self.act_quant3 = ActQuant(a_bit=aout_bit)
         #self.act_quant3 = act_pactq(a_bit=ain_bit,fixed_rescale=6.0)
 
         self.shortcut = nn.Sequential()
         if stride == 1:
-            self.act_quant4=activation_quant(a_bit=aout_bit)
+            
             self.shortcut = nn.Sequential(
                 Conv2d(w_bit,in_planes, out_planes, kernel_size=1, stride=1, padding=0, bias=False),
                 nn.BatchNorm2d(out_planes),
             )
+            self.act_quant4=ActQuant(a_bit=aout_bit)
 
     def forward(self, x):
-        out = self.bn1(self.conv1(x))
+        out = F.relu6(self.bn1(self.conv1(x)))
         out = self.act_quant1(out)
 
-        out = self.bn2(self.conv2(out))
+        out = F.relu6(self.bn2(self.conv2(out)))
         out = self.act_quant2(out)
 
         out = self.bn3(self.conv3(out))
@@ -65,7 +66,7 @@ class MobileNetV2_CF(nn.Module):
         self.actq_input = activation_quant(self.layer_abit[0]) #32
         self.stem = Conv2d(self.layer_wbit[0],3, 32, kernel_size=3, stride=1, padding=1, bias=False) # stride=1 for cifar10,default w_bit=32
         self.bn1 = BatchNorm2d(32)
-        self.actq_first = activation_quant(self.layer_abit[1])
+        self.actq_first = ActQuant(self.layer_abit[1])
 
         self.layers = self._make_layers(in_planes=32)
 
@@ -89,12 +90,13 @@ class MobileNetV2_CF(nn.Module):
         return nn.Sequential(*layers)
 
     def forward(self, x):
-        x = self.actq_input(x)
-        out = self.bn1(self.stem(x))
+        #x = self.actq_input(x)
+        out = F.relu( self.bn1(self.stem(x)) )
+        #TODO Relu and Relu6 don't need the negetiva part
         out = self.actq_first(out)
 
         out = self.layers(out)
-        out = self.bn2(self.head(out))
+        out = F.relu(self.bn2(self.head(out)))
         out = F.avg_pool2d(out, 4)
         out = self.actq_last(out)
 

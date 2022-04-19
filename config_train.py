@@ -43,8 +43,8 @@ if 'cifar' in C.dataset:
     C.header_channel = 512
     #C.header_channel = 1024
     if C.model == 'ToyNet':
-        C.layer_abit = [32,  8, 8,8,8, 8,8,8, 8,8,8,  32,32]# last 16 s
-        C.layer_wbit = [32,  8, 6,6,6, 6,6,6, 8,8,8,  16,16]
+        C.layer_abit = [32,  8, 8,8,8, 8,8,8, 8,8,8,  8,16]# last 16 s
+        C.layer_wbit = [8,   8, 8,8,8, 8,8,8, 8,8,8,  8,8]
     elif C.model =='MBv2_cf10':
         #stem + [ 1, 2, 3, 4, 3, 3, 1] + head + fc
         C.layer_abit = [32, 8, 8,8, 8,8,8, 8,8,8,8, 8,8,8, 8,8,8, 8, 32,32]# last 16 s
@@ -70,7 +70,7 @@ if 'cifar' in C.dataset:
     C.num_workers = 4
     C.pretrain = "ckpt/finetune-{0}".format(C.model)
 
-    C.batch_size = 256 #128 # 96->128
+    C.batch_size = 128 #128 # 96->128
     C.niters_per_epoch = C.num_train_imgs // C.batch_size
     C.image_height = 32 # this size is after down_sampling
     C.image_width = 32
@@ -79,7 +79,7 @@ if 'cifar' in C.dataset:
     C.nepochs = 300 #600->300
     C.eval_epoch = 1
     C.lr_schedule = 'cosine'
-    C.lr = 0.1#0.01
+    C.lr = 0.01
     # linear 
     C.decay_epoch = 100
     # exponential

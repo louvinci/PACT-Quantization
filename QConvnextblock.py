@@ -37,6 +37,7 @@ class ConvnextBlock(nn.Module):
                 #self.act_quant_bn = activation_quant(a_bit=32)
                 self.act_quant_bn = act_pactq(a_bit=32,fixed_rescale=2)#* Act_quant layer after the BN layer
             self.downsample = Conv2d(w_bit,C_in,C_out,kernel_size=stride,stride=stride,padding=0,dilation=1,groups=1,bias=False)
+            self.actq_down = ActQuant(a_bit=ain_bit)
         
         if padding is None:
             # assume h_out = h_in / s, p =( k-s) /2
@@ -74,7 +75,7 @@ class ConvnextBlock(nn.Module):
             x = self.norm(x)
             #x = self.act_quant_bn(x) # must quantize before the conv engine
             x = self.downsample(x) # output the q_x
-            x = self.act_quant_in1(x)
+            x = self.actq_down(x)
         identity = x 
         x = self.bn1(self.conv1(x)) 
         x = self.act_quant_in1(x)
@@ -107,7 +108,7 @@ class ConvNorm(nn.Module):
         
         #self.act_quant_out=activation_quant(a_bit=aout_bit)
         #self.act_quant_out=act_pactq(a_bit=aout_bit,fixed_rescale=10)
-        self.act_quant_out=ActQuant(a_bit=aout_bit,scale_coef=10.0)
+        self.act_quant_out=ActQuant(a_bit=aout_bit,scale_coef=6.0)
     
     def forward(self,x):
         q_x = self.conv(x)

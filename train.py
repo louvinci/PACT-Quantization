@@ -24,6 +24,7 @@ import torch.multiprocessing as mp
 import torch.utils.data.distributed
 
 from tensorboardX import SummaryWriter
+#from torch.utils.tensorboard import SummaryWriter
 
 from config_train import config
 from ToyModel import ToyNet
@@ -102,6 +103,7 @@ def main_worker(config):
         model = RN20_CF(config=config)
     else:
         raise NotImplementedError
+    
     
     #print(model)
     #return
@@ -267,7 +269,7 @@ def main_worker(config):
 
             if acc1 > best_acc:
                 best_acc = acc1
-                best_epoch = epoch
+                best_epoch = epoch+1
                 state = {}
                 state['state_dict'] = model.state_dict()
                 state['optimizer'] = optimizer.state_dict()
@@ -303,10 +305,11 @@ def train(train_loader, model, optimizer, lr_policy, logger, epoch, config):
         for name, param in model.named_parameters():
             if "scale_coef" in name:
                 l2_alpha += torch.pow(param, 2)
-        loss += lambda_alpha * l2_alpha
+        alpha_loss = lambda_alpha * l2_alpha
+        total_loss = loss+alpha_loss
 
-        loss.backward()
-
+        total_loss.backward()
+        
         #nn.utils.clip_grad_norm_(model.parameters(), config.grad_clip)
         optimizer.step()
 
@@ -315,10 +318,21 @@ def train(train_loader, model, optimizer, lr_policy, logger, epoch, config):
 
         if batch_idx % 10 == 0:
             
-            logging.info("[Epoch %d/%d][Step %d/%d] Loss=%.3f Time=%.3f Data Time=%.3f" % (epoch+1, config.nepochs, batch_idx + 1, len(train_loader), loss.item(), total_time, data_time))
-            logger.add_scalar('loss/train', loss, epoch*len(train_loader)+batch_idx)
+            logging.info("[Epoch %d/%d][Step %d/%d] Loss=%.3f Alpha_loss =%.3f Time=%.3f Data Time=%.3f" % (epoch+1, config.nepochs, batch_idx + 1, len(train_loader), loss.item(), alpha_loss.item(),total_time, data_time))
+            
+            logger.add_scalar('loss/train_loss', loss, epoch*len(train_loader)+batch_idx)
+            logger.add_scalar('loss/alpha_loss', alpha_loss, epoch*len(train_loader)+batch_idx)
             logger.add_scalar('learning_rate', optimizer.param_groups[0]['lr'], epoch * len(train_loader) + batch_idx)
-
+            '''
+            id=0
+            for name, param in model.named_parameters():
+                if "scale_coef" in name:
+                    logger.add_scalar('layer{0}'.format(id), param.item(), epoch*len(train_loader)+batch_idx)
+                    id+=1
+                if id==11:
+                    break
+            '''
+            
     torch.cuda.empty_cache()
     del loss
 

@@ -41,9 +41,9 @@ class ToyNet(nn.Module):
         
         self.header = ConvNorm(self.layer_abit[-1],self.layer_wbit[-2],self.num_channel_list[-1], self.header_channel, kernel_size=1)
         self.avgpool = nn.AdaptiveAvgPool2d(1)
-        self.act_qlast= activation_quant(a_bit = self.layer_abit[-1])
+        #self.act_qlast= activation_quant(a_bit = self.layer_abit[-1])
         #self.act_qlast= act_pactq(a_bit = self.layer_abit[-1],fixed_rescale=10)
-        #self.act_qlast= ActQuant(a_bit = self.layer_abit[-1],scale_coef=10.0)
+        self.act_qlast= ActQuant(a_bit = self.layer_abit[-1],scale_coef=6.0)
         
         self.fc = Linear_Q(self.layer_wbit[-1],self.header_channel, self.num_classes)
 
