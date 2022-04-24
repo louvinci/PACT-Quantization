@@ -1,4 +1,4 @@
-# DoReFa\PACT-QAT
+# Hardward-aware DoReFa\PACT-QAT 
 Quantization (QAT) Demo on CIFAR10 
 混合位宽量化、Quantization-aware-training、MobileNetv2、ResNet20、自定制的ConvNextNet
 
@@ -7,7 +7,7 @@ Quantization (QAT) Demo on CIFAR10
 
 ``config_train.py``: 选择模型、网络架构配置、量化位宽以及训练策略  
 ``quantize_fn.py``: 权重、激活量化策略。这里参照的是[DoReFa-Net](https://arxiv.org/abs/1606.06160)以及[PACT](https://arxiv.org/abs/1805.06085), 并做出了改进  
-``QConvnextblock.py``: 基础的block  
+``QConvnextblock.py``，```HW_QConvnextblock```: 基础的block，包含整型推理，兼容前者  
 ``ToyNet.py\MobileNetv2.py``: 定义了待量化的模型 ,stem + multiple blocks + heard + fc宏架构, ToyNet中启用PACT训练  
 ``ResNet_CF``: 定义了ResNet20在Cifar10上的量化模型，DoReFa量化     
 ``train.py``:  训练文件  
@@ -67,7 +67,12 @@ QAT参数变为batch:256, lr:0.1. MEM:0.272474M, MADDS = 41.214656M
 |ResNet20 |full Precision| cfg-1* w\o branch_out quant | cfg-2*|
 |:--:| :--:|:--:|:--:|
 |ACC(%) |92.50 |92.021\92.344|xx|
+## 整型推理
+仅以ToyNet为例在每个block内部实现了```INT_forward```函数，以进行整型推理（由于数据类型限制，实际仍以```Torch.LongTensor```存储，加载进Conv2d或者BN之前转化为```float```）   
+🙂:整型结果符合预期```91.41``` -> ```91.05```(这里略微下降是由于定点数小数位数确定)  
+
+小细节：  
+Conv+BN中BN参数可以吸收rescale，BN+CONV，则经过BN的输出用16bit or 32bit保存
 ## TODO
-- [ ] 整型推理
 - [ ] 权重提取
 - [ ] 硬件仿真
