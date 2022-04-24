@@ -205,17 +205,12 @@ class Linear_Q(nn.Linear):
 if __name__ == '__main__':
 
     a = torch.rand(2, 3, 32, 32)
-
-
     conv = Conv2d_Q(w_bit=8,in_channels=3, out_channels=16, kernel_size=3, padding=1)
     act = activation_quant(a_bit=4)
     print(conv)
-
-    
     b = conv(a)
     b.retain_grad()
     c = act(b)
-    
 
     #avg = torch.nn.AdaptiveAvgPool2d(1)
     avg = torch.nn.MaxPool2d(32)
