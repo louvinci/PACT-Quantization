@@ -1,4 +1,4 @@
-# Hardward-aware DoReFa\PACT-QAT 
+# Hardware-aware DoReFa\PACT-QAT 
 Quantization (QAT) Demo on CIFAR10 
 混合位宽量化、Quantization-aware-training、MobileNetv2、ResNet20、自定制的ConvNextNet
 
