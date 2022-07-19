@@ -1,6 +1,7 @@
-# Hardware-aware DoReFa\PACT-QAT 
-Quantization (QAT) Demo on CIFAR10 
-混合位宽量化、Quantization-aware-training、MobileNetv2、ResNet20、自定制的ConvNextNet
+# Hardware-friendly DoReFa\PACT-QAT 
+Quantization (QAT) Demo on CIFAR10   
+混合位宽量化、Quantization-aware-training on MobileNetv2、ResNet20、自定制的ConvNextNet    
+这里之所以是硬件友好，是因为选择了粗粒度的量化以及对称量化，硬件涉及的额外开销很少。  
 
 
 ----
