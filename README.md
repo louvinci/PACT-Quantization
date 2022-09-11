@@ -1,7 +1,7 @@
 # Hardware-friendly DoReFa\PACT-QAT 
-Quantization (QAT) Demo on CIFAR10   
+Quantization (QAT) Demo on CIFAR10 including the integer simulation   
 混合位宽量化、Quantization-aware-training on MobileNetv2、ResNet20、自定制的ConvNextNet    
-这里之所以是硬件友好，是因为选择了粗粒度的量化以及对称量化，硬件涉及的额外开销很少。  
+这里之所以是硬件友好，是因为选择了粗粒度的量化、对称量化，硬件涉及的额外开销很少，另外整个计算图都进行了量化。  
 
 
 ----
@@ -74,7 +74,7 @@ QAT参数变为batch:256, lr:0.1. MEM:0.272474M, MADDS = 41.214656M
 ```91.41``` -> ```91.05```(这里略微下降是由于定点数小数位数确定)  
 将中间层使用```ap_fixed<16,8>```保存时,准确率降至```71.97%```，下降明显。  
 ```ap_fixed<16,6>```时,精度为```68.93%```
-可见使用定点数来量化BN以及rescale参数时，位宽需要32bit
+可见如果不在QAT中对BN层进行量化，直接以定点数来量化BN以及rescale参数时，位宽需要32bit
 
 小细节：  
 Conv+BN中BN参数可以吸收rescale，BN+CONV，则经过BN的输出用16bit or 32bit保存
