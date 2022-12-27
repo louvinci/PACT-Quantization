@@ -12,6 +12,26 @@ Quantization (QAT) Demo on CIFAR10 including the integer simulation
 ``ToyNet.py\MobileNetv2.py``: 定义了待量化的模型 ,stem + multiple blocks + heard + fc宏架构, ToyNet中启用PACT训练  
 ``ResNet_CF``: 定义了ResNet20在Cifar10上的量化模型，DoReFa量化     
 ``train.py``:  训练文件  
+
+## ResNet20, MobileNet-v2量化结果
+NC：不收敛
+
+|CIFAR-10| float | DoReFa-INT4|PACT-INT4|mPACT-INT4|
+|:--:    |:--:|:--:|:--:|:--:|
+|RN20| 91.63| 88.76 |91.05  | 90.85|
+|MBv2| 94.16| NC    | 92.96 | 93.33|
+
+
+|CIFAR-10| float | DoReFa-INT6|PACT-INT6|mPACT-INT6|
+|:--:    |:--:|:--:|:--:|:--:|
+|RN20| 91.63| 90.07 |91.10  | 91.31|
+|MBv2| 94.16| 90.12 | 93.10 | 93.71|
+
+
+|CIFAR-10| float | DoReFa-INT8|PACT-INT8|mPACT-INT8|
+|:--:    |:--:|:--:|:--:|:--:|
+|RN20| 91.63| 90.05 |90.91  | 91.11|
+|MBv2| 94.16| 91.48 | 92.96 | 93.86|
 ## 总结
 以往软件量化仅仅在conv、fc的输入、输出量化，这里block的输入、输出都经过了伪量化(该操作对精度会有影响，尤其是MBConv)   
 ResNet类网络直接使用DoReFa量化对精度影响不大。但MBConv类则效果不行INT8 QAT下降都明显，关键在于DoReFa对激活的截取。  
@@ -30,7 +50,7 @@ ResNet类网络直接使用DoReFa量化对精度影响不大。但MBConv类则�
 😠ToyNet  
 batch=128, lr=0.01, 'cos'学习率调整, epoch=300 (params:0.203626M, MADDS :25.601536M)   
 ```cfg-1*```:输入不量化，fc激活16bit(F32,L16)，其余均INT8  
-|ToyNet|full Precision| cfg-1 w\o larger Batchsize|cfg-2 w\o modified pact|cfg-1* + mPACT |cfg-3 + mpact|
+|ToyNet|full Precision| cfg-1 w\o larger Batchsize|cfg-2 w\o mPACT|cfg-1* + mPACT |cfg-3 + mPACT|
 |:--:| :--:|:--:|:--:|:--:|:--:|
 |ACC(%) |91.594 |89.814\89.482|91.317\89.458 |**91.416**|90.813|
 
@@ -68,6 +88,7 @@ QAT参数变为batch:256, lr:0.1. MEM:0.272474M, MADDS = 41.214656M
 |ResNet20 |full Precision| cfg-1* w\o branch_out quant | cfg-2*|
 |:--:| :--:|:--:|:--:|
 |ACC(%) |92.50 |92.021\92.344|xx|
+
 ## 整型推理
 仅以ToyNet为例在每个block内部实现了```INT_forward```函数，以进行整型推理（由于数据类型限制，实际仍以```Torch.LongTensor```存储，加载进Conv2d或者BN之前转化为```float```）   
 🙂:整型结果符合预期首尾使用```fixed<32,16>```,中间层使用```ap_fixed<32,10>```保存未量化的参数和rescale因子   
